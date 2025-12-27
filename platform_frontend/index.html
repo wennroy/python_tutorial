@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python AI 互动教程</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Highlight.js for code syntax highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+</head>
+<body>
+    <div id="app">
+        <!-- Sidebar - Course Navigation -->
+        <aside class="sidebar" :class="{ collapsed: sidebarCollapsed }">
+            <div class="sidebar-header">
+                <h1>🐍 Python 教程</h1>
+                <button @click="sidebarCollapsed = !sidebarCollapsed" class="collapse-btn">
+                    {{ sidebarCollapsed ? '→' : '←' }}
+                </button>
+            </div>
+            
+            <nav class="curriculum-nav">
+                <div v-for="module in curriculum.modules" :key="module.id" class="module">
+                    <div class="module-header" @click="toggleModule(module.id)">
+                        <span class="module-icon">{{ expandedModules[module.id] ? '📂' : '📁' }}</span>
+                        <span class="module-title">{{ module.title }}</span>
+                    </div>
+                    <ul v-show="expandedModules[module.id]" class="chapter-list">
+                        <li v-for="chapter in module.chapters" 
+                            :key="chapter.id"
+                            :class="{ active: currentChapter?.id === chapter.id }"
+                            @click="loadChapter(module.id, chapter)">
+                            <span class="chapter-icon">{{ chapter.type === 'notebook' ? '📓' : '📄' }}</span>
+                            {{ chapter.title }}
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="content">
+            <!-- Header -->
+            <header class="content-header">
+                <div class="breadcrumb">
+                    <span v-if="currentModule">{{ currentModule.title }}</span>
+                    <span v-if="currentChapter"> / {{ currentChapter.title }}</span>
+                </div>
+                <div class="header-actions">
+                    <button @click="toggleCodePanel" class="btn btn-code" v-if="currentChapter">
+                        {{ showCodePanel ? '隐藏代码' : '显示代码' }} 💻
+                    </button>
+                    <button @click="refreshCode" class="btn btn-refresh" v-if="showCodePanel">
+                        刷新代码 🔄
+                    </button>
+                </div>
+            </header>
+
+            <!-- Content Container -->
+            <div class="content-container" :class="{ 'with-code': showCodePanel }">
+                <!-- Tutorial Content -->
+                <article class="tutorial-content" ref="tutorialContentRef" v-html="chapterContent">
+                </article>
+
+                <!-- Code Panel -->
+                <aside class="code-panel" v-if="showCodePanel">
+                    <div class="code-panel-header">
+                        <h3>📝 你的代码</h3>
+                        <span class="filename">{{ currentExerciseFile }}</span>
+                        <div class="code-panel-actions">
+                            <span v-if="codeSaveStatus" class="save-status" :class="codeSaveStatus">{{ codeSaveMessage }}</span>
+                            <button @click="saveCode" class="btn btn-save" :disabled="!codeModified">
+                                💾 保存
+                            </button>
+                        </div>
+                    </div>
+                    <div class="code-panel-scroll-wrapper">
+                        <div class="code-panel-content code-editor-wrapper">
+                            <textarea 
+                                class="code-editor" 
+                                v-model="userCode" 
+                                @input="onCodeChange"
+                                @keydown.tab.prevent="handleTab"
+                                spellcheck="false"
+                                placeholder="// 在这里编写你的代码..."></textarea>
+                        </div>
+                        <!-- Diff View -->
+                        <div class="diff-view" v-if="showDiff">
+                            <h4>参考答案</h4>
+                            <pre><code class="language-python">{{ solutionCode }}</code></pre>
+                        </div>
+                    </div>
+                    <div class="code-panel-footer">
+                        <button @click="showDiff = !showDiff" class="btn btn-diff">
+                            {{ showDiff ? '隐藏对比' : '对比参考答案' }}
+                        </button>
+                    </div>
+                </aside>
+            </div>
+
+            <!-- Fixed Bottom Navigation Bar -->
+            <div class="bottom-nav" v-if="currentChapter">
+                <div class="nav-left">
+                    <button @click="goToPrevChapter" class="btn btn-nav" :disabled="!hasPrevChapter">
+                        ⬅️ 上一页
+                    </button>
+                </div>
+                <div class="nav-center">
+                    <button @click="scrollToTop" class="btn btn-scroll" title="回到顶部">
+                        ⬆️ 顶部
+                    </button>
+                    <button @click="scrollToBottom" class="btn btn-scroll" title="滑到底部">
+                        ⬇️ 底部
+                    </button>
+                    <button @click="toggleSolutionCompare" class="btn btn-solution" :class="{ active: showCodePanel && showDiff }">
+                        📝 对比答案
+                    </button>
+                </div>
+                <div class="nav-right">
+                    <button @click="goToNextChapter" class="btn btn-nav" :disabled="!hasNextChapter">
+                        下一页 ➡️
+                    </button>
+                </div>
+            </div>
+
+            <!-- Welcome Screen -->
+            <div class="welcome" v-if="!currentChapter">
+                <h1>👋 欢迎来到 Python AI 互动教程</h1>
+                <p>在左侧选择一个章节开始学习</p>
+                <div class="features">
+                    <div class="feature">
+                        <span class="feature-icon">🤖</span>
+                        <h3>AI 辅助学习</h3>
+                        <p>结合 GitHub Copilot 加速你的编程学习</p>
+                    </div>
+                    <div class="feature">
+                        <span class="feature-icon">💻</span>
+                        <h3>实时代码同步</h3>
+                        <p>在 VS Code 中编写代码，这里实时展示</p>
+                    </div>
+                    <div class="feature">
+                        <span class="feature-icon">📊</span>
+                        <h3>进度追踪</h3>
+                        <p>记录你的学习进度，随时继续</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Vue.js -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

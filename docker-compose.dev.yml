@@ -1,0 +1,28 @@
+# Python Tutorial Platform - Development Docker Compose
+# Use with: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./platform_backend
+      dockerfile: Dockerfile
+    volumes:
+      # Mount backend code for hot reload
+      - ./platform_backend/main.py:/app/main.py
+      - ./curriculum_content:/content:ro
+      - ./workspace:/workspace
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    
+  frontend:
+    # In development, you might want to use a different approach
+    # such as serving files directly without nginx
+    build:
+      context: ./platform_frontend
+      dockerfile: Dockerfile
+    volumes:
+      # Mount frontend code for easier development
+      - ./platform_frontend/index.html:/usr/share/nginx/html/index.html
+      - ./platform_frontend/style.css:/usr/share/nginx/html/style.css
+      - ./platform_frontend/app.js:/usr/share/nginx/html/app.js

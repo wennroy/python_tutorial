@@ -1,0 +1,43 @@
+# Python Tutorial Platform
+# Docker Compose configuration for development and deployment
+
+version: '3.8'
+
+services:
+  # Backend API Service
+  backend:
+    build:
+      context: ./platform_backend
+      dockerfile: Dockerfile
+    container_name: tutorial-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount curriculum content (read-only for safety)
+      - ./curriculum_content:/content:ro
+      # Mount user workspace (read-write for code files)
+      - ./workspace:/workspace
+    environment:
+      - CONTENT_DIR=/content
+      - WORKSPACE_DIR=/workspace
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend Web Service
+  frontend:
+    build:
+      context: ./platform_frontend
+      dockerfile: Dockerfile
+    container_name: tutorial-frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+# Optional: Development configuration
+# Use: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
