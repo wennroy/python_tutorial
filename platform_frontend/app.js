@@ -5,8 +5,8 @@
 
 const { createApp, ref, reactive, computed, onMounted, watch } = Vue;
 
-// API Base URL - Change this for production
-const API_BASE = 'http://localhost:8000';
+// API Base URL - Read from window.env injected by Docker, fallback to localhost
+const API_BASE = (window.env && window.env.API_BASE) ? window.env.API_BASE : 'http://localhost:8000';
 
 const app = createApp({
     setup() {

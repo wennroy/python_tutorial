@@ -11,7 +11,7 @@ services:
       dockerfile: Dockerfile
     container_name: tutorial-backend
     ports:
-      - "8000:8000"
+      - "${BACKEND_PORT:-8000}:8000"
     volumes:
       # Mount curriculum content (read-only for safety)
       - ./curriculum_content:/content:ro
@@ -34,9 +34,13 @@ services:
       dockerfile: Dockerfile
     container_name: tutorial-frontend
     ports:
-      - "8085:80"
+      - "${FRONTEND_PORT:-8085}:80"
     depends_on:
       - backend
+    environment:
+      - API_BASE_URL=${VUE_APP_API_BASE:-http://localhost:8000}
+    command: >
+      /bin/sh -c "echo 'window.env = { API_BASE: \"'${VUE_APP_API_BASE:-http://localhost:8000}'\" };' > /usr/share/nginx/html/config.js && nginx -g 'daemon off;'"
     restart: unless-stopped
 
 # Optional: Development configuration
