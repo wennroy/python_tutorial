@@ -143,6 +143,7 @@
 #### 模块 Extra: 常用模块拓展 (可选)
 *   `asyncio` (并发), `logging` (日志), `argparse` (CLI), `re` (正则), `datetime`。
 *   **Docker 基础**: Windows/macOS/Linux 安装指南与基础使用。
+*   **Git 版本控制**: 基础工作流与修改提交历史（修改 Author/Email）。
 
 ### 第二阶段：终极实战项目 (Capstone Project)
 
