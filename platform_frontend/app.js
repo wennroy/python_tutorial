@@ -5,8 +5,9 @@
 
 const { createApp, ref, reactive, computed, onMounted, watch } = Vue;
 
-// API Base URL - Read from window.env injected by Docker, fallback to localhost
-const API_BASE = (window.env && window.env.API_BASE) ? window.env.API_BASE : 'http://localhost:8000';
+// API Base URL - Use relative path to leverage nginx proxy, or read from window.env
+// Empty string means requests go to same origin (nginx will proxy /api/* to backend)
+const API_BASE = (window.env && window.env.API_BASE) ? window.env.API_BASE : '';
 
 const app = createApp({
     setup() {
