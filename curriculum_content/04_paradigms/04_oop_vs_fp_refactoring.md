@@ -1,4 +1,4 @@
-# 模块 4-3: 范式大对决与重构 (Paradigm Showdown & Refactoring)
+# 模块 4-4: 范式大对决与重构 (Paradigm Showdown & Refactoring)
 
 ## 1. 引言 (The Hook)
 手里拿着锤子，看什么都像钉子。如果你只懂 OOP，你可能会创建 `AbstractIntegerFactory` 来做一个加法。如果你只懂 FP，你可能会为了打印一行日志而引入复杂的 Monad。
@@ -74,7 +74,7 @@ print(calculate_total(cart))
 
 **任务**: 重构 `TextProcessor`。
 
-1.  创建一个名为 `exercise_04_03.py` 的文件。
+1.  创建一个名为 `exercise_04_04.py` 的文件。
 2.  复制以下 OOP 代码：
     ```python
     class TextProcessor:

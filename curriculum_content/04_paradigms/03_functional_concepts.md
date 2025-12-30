@@ -1,4 +1,4 @@
-# 模块 4-2: 函数式编程思维 (Functional Programming Mindset)
+# 模块 4-3: 函数式编程思维 (Functional Programming Mindset)
 
 ## 1. 引言 (The Hook)
 在 OOP 中，我们关注“对象”和“状态”的变化。而在**函数式编程 (FP)** 中，我们关注的是“数据流”和“变换”。
@@ -65,7 +65,7 @@ FP 的代码通常非常简洁，但有时难以阅读。AI 可以帮我们转�
 
 **任务**: 数据清洗流水线。
 
-1.  创建一个名为 `exercise_04_02.py` 的文件。
+1.  创建一个名为 `exercise_04_03.py` 的文件。
 2.  定义一个包含用户数据的列表：
     ```python
     users = [

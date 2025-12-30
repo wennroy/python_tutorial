@@ -7,7 +7,8 @@
 
 **本章学习目标**:
 - 理解类 (Class) 与对象 (Object) 的区别。
-- 掌握继承 (Inheritance) 与多态 (Polymorphism)。
+- 掌握继承 (Inheritance) 与多态 (Polymorphism) 的核心机制。
+- 理解 Python 特有的“鸭子类型” (Duck Typing)。
 - 学会使用 Copilot 快速生成样板代码。
 
 ## 2. 核心概念 (The Concept)
@@ -21,6 +22,18 @@
 
 ### 多态 (Polymorphism)
 同一个接口，不同的表现。`Warrior.attack()` 可能是挥剑，`Mage.attack()` 可能是丢火球。调用者不需要知道具体是哪个职业，只需要调用 `.attack()` 即可。
+
+## 2.1 深入理解继承与多态 (Deep Dive)
+
+### `super()` 到底是什么？
+你可能认为 `super()` 只是调用父类。但在多重继承中，它其实是按照 **MRO (Method Resolution Order)** 的顺序来查找下一个类。
+*   **最佳实践**: 始终使用 `super().__init__()` 而不是 `Parent.__init__(self)`，以确保在复杂的继承关系中每个类只被初始化一次。
+
+### 鸭子类型 (Duck Typing)
+Python 是动态语言，它不强制要求继承。
+> "如果它走起路来像鸭子，叫起来像鸭子，那它就是鸭子。"
+
+只要一个对象实现了 `attack()` 方法，它就可以被当作“战士”来使用，哪怕它并没有继承 `Character` 类。这就是 Python 灵活性的来源。
 
 ## 3. 代码实战 (Code in Action)
 
@@ -80,4 +93,4 @@ OOP 的代码往往比较冗长（Boilerplate code），这正是 AI 擅长的�
 ## 6. 总结与延伸 (Summary & Next Steps)
 OOP 让我们能以更接近人类思维的方式组织代码。通过类和继承，我们实现了代码的复用和逻辑的封装。
 
-下一章，我们将走向另一个极端：**函数式编程 (Functional Programming)**，看看如何用纯粹的数学思维来写代码。
+下一章，我们将深入探讨 OOP 的高级话题：**抽象类与设计模式**，看看如何像架构师一样设计代码。

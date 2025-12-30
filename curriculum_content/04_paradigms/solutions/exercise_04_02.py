@@ -1,4 +1,4 @@
-# 模块 4-1.5 练习参考答案: 进阶 OOP
+# 模块 4-2 练习参考答案: 进阶 OOP
 
 from abc import ABC, abstractmethod
 import threading
