@@ -263,3 +263,58 @@ python_tutorial/
 2.  初始化 `platform_backend` 和 `curriculum_content` 目录。
 3.  编写第一个教案文件作为测试。
 4.  实现后端的内容解析引擎。
+
+## 8. AI 开发模块增强需求 (参考 atlas_tfl_ai 项目)
+
+### 8.1 需要补充的生产级 AI 技术
+
+基于 `atlas_tfl_ai` 项目的实际应用，需要在 `05_ai_development` 模块中补充以下内容：
+
+#### 8.1.1 Langfuse - LLM 可观测性平台
+- **用途**: LLM 调用追踪、性能监控、成本分析
+- **核心功能**:
+  - 追踪每次 LLM 调用的输入/输出
+  - Session 级别的对话追踪
+  - Token 使用量和成本统计
+  - Prompt 模板管理和版本控制
+- **实现方式**: 通过 `CallbackHandler` 集成到 LangChain
+
+#### 8.1.2 Milvus - 向量数据库
+- **用途**: 大规模向量存储和相似性检索
+- **核心功能**:
+  - 高性能向量索引 (IVF_FLAT, HNSW 等)
+  - 标量字段过滤 (expr 表达式)
+  - 分布式架构支持
+  - 支持混合检索 (向量 + 关键词)
+- **对比 Chroma**: 适合更大规模的生产环境
+
+#### 8.1.3 多 LLM Provider 支持
+- **支持的 Provider**:
+  - Azure OpenAI (企业级)
+  - OpenRouter (多模型路由)
+  - 本地模型
+- **Fallback 机制**: 当主模型触发内容过滤时自动切换备用模型
+- **模块化配置**: 不同任务使用不同模型
+
+#### 8.1.4 高级 RAG 架构
+- **混合检索策略**:
+  - Dense Retrieval (向量相似性)
+  - Sparse Retrieval (BM25 关键词匹配)
+  - Hybrid Retrieval (加权融合)
+- **Reranking**: 对初步结果进行重排序
+- **多知识库管理**: Global KB + Project-level KB
+
+#### 8.1.5 生产级异步处理
+- **技术栈**:
+  - `aiohttp` / `aiofiles` 异步 I/O
+  - `gevent` / `greenlet` 协程支持
+  - Redis 缓存和消息队列
+  - Kafka 消息队列 (高吞吐场景)
+
+### 8.2 待更新的文件
+
+| 文件 | 需要补充的内容 |
+|------|---------------|
+| `05_production_project.md` | Langfuse 集成、Milvus 使用、多 Provider 支持、Fallback 机制 |
+| `03_memory_and_rag.md` | 高级 RAG 架构、Milvus 向量库、混合检索策略 |
+| `01_ai_landscape.md` | 可观测性工具 (Langfuse/LangSmith)、向量数据库对比 |

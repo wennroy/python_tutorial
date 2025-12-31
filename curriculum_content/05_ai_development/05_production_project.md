@@ -653,9 +653,557 @@ volumes:
 
 ---
 
-## 5. 成本优化策略
+## 5. LLM 可观测性：Langfuse 集成
 
-### 5.1 Token 使用优化
+在生产环境中，你需要监控和追踪每一次 LLM 调用。**Langfuse** 是一个开源的 LLM 可观测性平台。
+
+### 5.1 为什么需要 Langfuse？
+
+- 📊 **调用追踪**：记录每次 LLM 的输入/输出
+- 💰 **成本分析**：追踪 Token 使用量和费用
+- 🔍 **调试定位**：快速定位问题调用
+- 📈 **性能监控**：响应时间、成功率统计
+- 🏷️ **Prompt 版本管理**：管理和比较不同版本的 Prompt
+
+### 5.2 配置 Langfuse
+
+```python
+# app/config/llm_config.py
+import os
+
+def get_langfuse_client_config() -> dict | None:
+    """
+    获取 Langfuse 配置（环境变量优先）
+    
+    Returns:
+        dict(public_key=..., secret_key=..., host=...) 或 None
+    """
+    public_key = os.environ.get("LANGFUSE_PUBLIC_KEY")
+    secret_key = os.environ.get("LANGFUSE_SECRET_KEY")
+    host = os.environ.get("LANGFUSE_HOST", "https://cloud.langfuse.com")
+    
+    if not public_key or not secret_key:
+        return None
+    
+    return {
+        "public_key": public_key,
+        "secret_key": secret_key,
+        "host": host
+    }
+
+
+def langfuse_handler(session_id: str, user_id: str, trace_name: str, metadata: dict = None):
+    """
+    创建 Langfuse 回调处理器
+    
+    Args:
+        session_id: 会话 ID (用于追踪对话)
+        user_id: 用户 ID
+        trace_name: 追踪名称 (如 "customer_service", "code_generation")
+        metadata: 额外的元数据
+    
+    Returns:
+        CallbackHandler 或 None (如果 Langfuse 未配置)
+    """
+    cfg = get_langfuse_client_config()
+    if not cfg:
+        return None
+    
+    try:
+        from langfuse.callback import CallbackHandler
+        
+        return CallbackHandler(
+            **cfg,
+            session_id=session_id,
+            user_id=user_id,
+            trace_name=trace_name,
+            tags=[os.environ.get("ENV", "dev")],
+            metadata=metadata or {},
+            # 避免监控影响主流程
+            timeout=3,
+            max_retries=0,
+            enabled=True,
+        )
+    except Exception:
+        # Langfuse 是可选的，失败时静默返回 None
+        return None
+```
+
+### 5.3 在 LLM 调用中使用 Langfuse
+
+```python
+# app/llm_core/base.py
+from langchain_core.output_parsers.json import JsonOutputParser
+
+class BaseLLM:
+    """支持 Langfuse 追踪的 LLM 基类"""
+    
+    def __init__(self, tenant_id: str, task_id: str, track_name: str, 
+                 message_id: str = None, extra_metadata: dict = None):
+        """
+        Args:
+            tenant_id: 租户 ID
+            task_id: 任务 ID (用作 session_id)
+            track_name: 追踪名称 (如 "group_block_recognition")
+            extra_metadata: 额外元数据
+        """
+        metadata = {'message_id': message_id}
+        if extra_metadata:
+            metadata.update(extra_metadata)
+        
+        # Langfuse handler 可能为 None
+        self.langfuse_handler = langfuse_handler(
+            session_id=task_id,
+            user_id=tenant_id,
+            trace_name=track_name,
+            metadata=metadata
+        )
+        self.track_name = track_name
+    
+    async def arun(self, prompt: str) -> dict:
+        """执行 LLM 调用，自动追踪到 Langfuse"""
+        chain = self.model | JsonOutputParser()
+        
+        # 如果 Langfuse 可用，则传入 callbacks
+        if self.langfuse_handler:
+            response = await chain.ainvoke(
+                prompt,
+                config={"callbacks": [self.langfuse_handler]}
+            )
+        else:
+            response = await chain.ainvoke(prompt)
+        
+        return response
+```
+
+### 5.4 构建追踪元数据
+
+```python
+# app/pipeline/utils/langfuse_metadata.py
+from typing import Any, Dict, Optional
+
+def build_langfuse_metadata(
+    stage: str,
+    *,
+    table_id: str = None,
+    table_title: str = None,
+    row_count: int = None,
+    column_count: int = None,
+    extra: Dict[str, Any] = None,
+) -> Dict[str, Any]:
+    """
+    构建 Langfuse 追踪的元数据
+    
+    Args:
+        stage: 处理阶段 (如 "group_recognition", "code_generation")
+        table_id: 表格 ID
+        table_title: 表格标题
+        extra: 额外信息
+    
+    Returns:
+        清理后的元数据字典
+    """
+    metadata = {
+        "pipeline_stage": stage,
+        "table_id": table_id,
+        "table_title": table_title,
+        "row_count": row_count,
+        "column_count": column_count,
+    }
+    
+    if extra:
+        metadata.update(extra)
+    
+    # 移除空值
+    return {k: v for k, v in metadata.items() if v is not None}
+```
+
+### 5.5 Langfuse Dashboard 功能
+
+配置完成后，你可以在 Langfuse Dashboard 中：
+
+1. **查看追踪列表**：按时间、用户、Session 筛选
+2. **分析单次调用**：查看完整的输入/输出和耗时
+3. **成本统计**：查看 Token 使用量和估算费用
+4. **性能分析**：响应时间分布、错误率
+5. **Prompt 管理**：版本控制和 A/B 测试
+
+---
+
+## 6. 多 Provider 支持与 Fallback 机制
+
+生产环境中，单一 LLM Provider 可能存在故障或限制。我们需要支持多 Provider 和自动 Fallback。
+
+### 6.1 多 Provider 配置
+
+```python
+# app/config/llm_config.py
+from langchain_openai import AzureChatOpenAI, ChatOpenAI
+
+def model(
+    temperature: float = 0.2,
+    request_timeout: int = 300,
+    provider: str = None,
+    track_name: str = None
+):
+    """
+    获取 LLM 模型实例
+    
+    支持的 Provider:
+    - "azure_openai": Azure OpenAI (企业级)
+    - "openrouter": OpenRouter (多模型路由)
+    
+    Args:
+        temperature: 采样温度
+        request_timeout: 请求超时
+        provider: 指定 Provider (可选)
+        track_name: 追踪名称，用于确定模块特定配置
+    """
+    if provider is None:
+        # 从配置或 track_name 确定 provider
+        provider = get_llm_provider()
+    
+    if provider == "openrouter":
+        return ChatOpenAI(
+            model=os.environ.get("OPENROUTER_MODEL", "openai/gpt-4"),
+            openai_api_key=os.environ["OPENROUTER_API_KEY"],
+            base_url="https://openrouter.ai/api/v1",
+            temperature=temperature,
+            timeout=request_timeout,
+        )
+    elif provider == "azure_openai":
+        return AzureChatOpenAI(
+            azure_deployment=os.environ["AZURE_DEPLOYMENT"],
+            temperature=temperature,
+            timeout=request_timeout,
+        )
+    else:
+        raise ValueError(f"不支持的 Provider: {provider}")
+```
+
+### 6.2 自动 Fallback 机制
+
+```python
+# app/llm_core/base.py
+import logging
+
+logger = logging.getLogger(__name__)
+
+class BaseLLM:
+    """支持自动 Fallback 的 LLM 基类"""
+    
+    async def _invoke_with_fallback(self, messages_or_prompt):
+        """
+        执行 LLM 调用，遇到内容过滤错误时自动切换备用模型
+        
+        Fallback 策略:
+        1. 尝试主模型 (默认: Azure OpenAI)
+        2. 如果触发内容过滤，切换到备用模型 (OpenRouter)
+        3. 如果备用也失败，抛出异常
+        """
+        try:
+            # 第一次尝试：使用主模型
+            chain = await self.model() | JsonOutputParser()
+            
+            if self.langfuse_handler:
+                response = await chain.ainvoke(
+                    messages_or_prompt,
+                    config={"callbacks": [self.langfuse_handler]}
+                )
+            else:
+                response = await chain.ainvoke(messages_or_prompt)
+            
+            return response
+            
+        except Exception as e:
+            error_msg = str(e)
+            
+            # 检查是否是 Azure 内容过滤错误
+            if "content_filter" in error_msg or "content management policy" in error_msg:
+                logger.warning(
+                    f"Azure 内容过滤触发，切换到备用模型 (OpenRouter)..."
+                )
+                
+                try:
+                    # 使用 OpenRouter 作为备用
+                    fallback_model = model(provider="openrouter", track_name=self.track_name)
+                    chain = fallback_model | JsonOutputParser()
+                    
+                    if self.langfuse_handler:
+                        response = await chain.ainvoke(
+                            messages_or_prompt,
+                            config={"callbacks": [self.langfuse_handler]}
+                        )
+                    else:
+                        response = await chain.ainvoke(messages_or_prompt)
+                    
+                    logger.info("使用 OpenRouter 备用模型成功")
+                    return response
+                    
+                except Exception as fallback_error:
+                    logger.error(
+                        f"主模型和备用模型都失败。"
+                        f"主模型错误: {error_msg}。"
+                        f"备用模型错误: {fallback_error}"
+                    )
+                    raise e
+            else:
+                # 非内容过滤错误，直接抛出
+                raise
+```
+
+### 6.3 模块化 LLM 配置
+
+不同任务可能需要不同的模型：
+
+```yaml
+# config.yaml
+llm_provider: azure_openai  # 默认 provider
+
+llm_modules:
+  basic_info:
+    provider: azure_openai
+    model_name: gpt-4.1
+  
+  code_generation:
+    provider: openrouter
+    model_name: anthropic/claude-3-opus
+  
+  simple_tasks:
+    provider: azure_openai
+    model_name: gpt-4o-mini  # 简单任务用便宜模型
+```
+
+```python
+def get_module_llm_config(module_name: str) -> dict:
+    """获取模块特定的 LLM 配置"""
+    # 从 config.yaml 读取模块配置
+    if hasattr(conf, 'llm_modules') and module_name in conf.llm_modules:
+        module_config = conf.llm_modules[module_name]
+        return {
+            "provider": module_config.get('provider'),
+            "model_name": module_config.get('model_name')
+        }
+    
+    # 回退到默认配置
+    return {
+        "provider": get_llm_provider(),
+        "model_name": None
+    }
+```
+
+---
+
+## 7. 生产级向量数据库：Milvus
+
+对于大规模生产环境，Chroma 可能不够用。**Milvus** 是一个分布式向量数据库，支持百亿级向量。
+
+### 7.1 Milvus vs Chroma 对比
+
+| 特性 | Chroma | Milvus |
+|-----|--------|--------|
+| 规模 | 百万级 | 百亿级 |
+| 部署 | 单机/嵌入式 | 分布式集群 |
+| 标量过滤 | 基础支持 | 强大的 expr 表达式 |
+| 索引类型 | HNSW | IVF_FLAT, HNSW, GPU 索引 |
+| 适用场景 | 开发/小规模 | 生产/大规模 |
+
+### 7.2 Milvus 集成实现
+
+```python
+# app/rag_core/milvus_retriever.py
+from typing import List, Dict, Any, Optional
+from pymilvus import (
+    connections, Collection, CollectionSchema,
+    FieldSchema, DataType, utility
+)
+from dataclasses import dataclass
+
+@dataclass
+class RetrievalResult:
+    """检索结果"""
+    document: Document
+    score: float
+    retrieval_method: str = "milvus"
+
+
+class MilvusVariableRetriever:
+    """基于 Milvus 的变量检索器，支持标量字段过滤"""
+    
+    COLLECTION_NAME = "knowledge_base"
+    VECTOR_DIM = 3072  # text-embedding-3-large 维度
+    
+    def __init__(self, host: str = "localhost", port: int = 19530):
+        # 连接 Milvus
+        connections.connect(alias="default", host=host, port=port)
+        
+        # 初始化 Embedding 模型
+        self.embeddings_model = embeddings()
+        
+        # 获取或创建 Collection
+        self.collection = self._get_or_create_collection()
+    
+    def _create_collection(self) -> Collection:
+        """创建 Milvus Collection"""
+        fields = [
+            FieldSchema(name="id", dtype=DataType.INT64, is_primary=True, auto_id=True),
+            FieldSchema(name="vector", dtype=DataType.FLOAT_VECTOR, dim=self.VECTOR_DIM),
+            FieldSchema(name="category", dtype=DataType.VARCHAR, max_length=100),  # 标量过滤字段
+            FieldSchema(name="content", dtype=DataType.VARCHAR, max_length=65535),
+            FieldSchema(name="doc_id", dtype=DataType.VARCHAR, max_length=255),
+        ]
+        
+        schema = CollectionSchema(fields=fields, description="知识库集合")
+        collection = Collection(name=self.COLLECTION_NAME, schema=schema)
+        
+        # 创建向量索引
+        index_params = {
+            "metric_type": "L2",
+            "index_type": "IVF_FLAT",
+            "params": {"nlist": 1024}
+        }
+        collection.create_index("vector", index_params)
+        
+        # 创建标量索引 (加速过滤)
+        collection.create_index("category", {"index_type": "INVERTED"})
+        
+        return collection
+    
+    def search(
+        self,
+        query: str,
+        category: str = None,
+        top_k: int = 10,
+        expr: str = None
+    ) -> List[RetrievalResult]:
+        """
+        向量搜索 + 标量过滤
+        
+        Args:
+            query: 查询文本
+            category: 分类过滤
+            top_k: 返回数量
+            expr: 自定义过滤表达式 (如 'category == "macro" && type == "analysis"')
+        """
+        # 生成查询向量
+        query_embedding = self.embeddings_model.embed_query(query)
+        query_vector = [query_embedding.tolist()]
+        
+        # 构建过滤表达式
+        if expr is None and category:
+            expr = f'category == "{category}"'
+        
+        # 搜索参数
+        search_params = {"metric_type": "L2", "params": {"nprobe": 10}}
+        
+        # 执行搜索
+        results = self.collection.search(
+            data=query_vector,
+            anns_field="vector",
+            param=search_params,
+            limit=top_k,
+            expr=expr,  # 标量过滤
+            output_fields=["category", "content", "doc_id"]
+        )
+        
+        # 转换结果
+        retrieval_results = []
+        for hit in results[0]:
+            # 距离转相似度分数
+            score = 1.0 / (1.0 + hit.distance)
+            
+            doc = Document(
+                content=hit.entity.get("content", ""),
+                metadata={"category": hit.entity.get("category", "")},
+                doc_id=hit.entity.get("doc_id", "")
+            )
+            
+            retrieval_results.append(RetrievalResult(document=doc, score=score))
+        
+        return retrieval_results
+```
+
+### 7.3 混合检索策略
+
+```python
+# app/rag_core/hybrid_retriever.py
+from rank_bm25 import BM25Okapi
+
+class HybridRetriever:
+    """混合检索：向量 + BM25 关键词"""
+    
+    def __init__(self, milvus_retriever, documents: List[Document]):
+        self.milvus_retriever = milvus_retriever
+        
+        # 构建 BM25 索引
+        tokenized_docs = [doc.content.split() for doc in documents]
+        self.bm25 = BM25Okapi(tokenized_docs)
+        self.documents = documents
+    
+    def search(
+        self,
+        query: str,
+        top_k: int = 10,
+        vector_weight: float = 0.5,
+        keyword_weight: float = 0.5
+    ) -> List[RetrievalResult]:
+        """
+        混合检索
+        
+        Args:
+            query: 查询文本
+            top_k: 返回数量
+            vector_weight: 向量检索权重
+            keyword_weight: 关键词检索权重
+        """
+        # 向量检索
+        vector_results = self.milvus_retriever.search(query, top_k=top_k * 2)
+        
+        # BM25 关键词检索
+        tokenized_query = query.split()
+        bm25_scores = self.bm25.get_scores(tokenized_query)
+        
+        # 融合分数
+        combined_scores = {}
+        
+        for result in vector_results:
+            doc_id = result.document.doc_id
+            combined_scores[doc_id] = {
+                "document": result.document,
+                "vector_score": result.score * vector_weight,
+                "keyword_score": 0
+            }
+        
+        for idx, score in enumerate(bm25_scores):
+            doc_id = self.documents[idx].doc_id
+            if doc_id in combined_scores:
+                combined_scores[doc_id]["keyword_score"] = score * keyword_weight
+            elif score > 0:
+                combined_scores[doc_id] = {
+                    "document": self.documents[idx],
+                    "vector_score": 0,
+                    "keyword_score": score * keyword_weight
+                }
+        
+        # 计算最终分数并排序
+        results = []
+        for doc_id, data in combined_scores.items():
+            final_score = data["vector_score"] + data["keyword_score"]
+            results.append(RetrievalResult(
+                document=data["document"],
+                score=final_score,
+                retrieval_method="hybrid"
+            ))
+        
+        results.sort(key=lambda x: x.score, reverse=True)
+        return results[:top_k]
+```
+
+---
+
+## 8. 成本优化策略
+
+### 8.1 Token 使用优化
 
 ```python
 # 1. 使用更便宜的模型处理简单任务
@@ -699,7 +1247,7 @@ def check_common_qa(question: str) -> Optional[str]:
     return None
 ```
 
-### 5.2 调用频率控制
+### 8.2 调用频率控制
 
 ```python
 from functools import wraps
@@ -751,7 +1299,7 @@ async def chat(request: ChatRequest):
 
 ---
 
-## 6. 动手挑战
+## 9. 动手挑战
 
 ### 挑战: 完善这个客服系统
 
@@ -782,13 +1330,15 @@ async def chat(request: ChatRequest):
 
 ---
 
-## 7. 小结
+## 10. 小结
 
 ### 本章要点
 - ✅ 生产级 AI 应用的完整架构
 - ✅ 安全防护：输入验证、Prompt 注入防护
 - ✅ 性能优化：缓存、限流、模型选择
-- ✅ 可观测性：日志、监控、追踪
+- ✅ **可观测性：Langfuse 集成、LLM 追踪**
+- ✅ **多 Provider 支持：Azure OpenAI、OpenRouter、自动 Fallback**
+- ✅ **生产级向量库：Milvus 集成、混合检索**
 - ✅ 部署：Docker 化、环境配置
 
 ### 你已经学会了
@@ -799,17 +1349,22 @@ async def chat(request: ChatRequest):
 3. **Memory & RAG**：让 AI 有记忆和知识
 4. **Agent & Tools**：让 AI 自主行动
 5. **生产部署**：构建完整的 AI 应用
+6. **可观测性**：使用 Langfuse 追踪和监控 LLM 调用
+7. **多 Provider**：支持多个 LLM 服务商和自动 Fallback
+8. **生产级 RAG**：使用 Milvus 和混合检索
 
 **你现在可以开始构建自己的 AI 项目了！** 🎉
 
 ---
 
-## 8. 学习资源
+## 11. 学习资源
 
 ### 官方文档
 - [LangChain 文档](https://python.langchain.com/)
 - [LangGraph 文档](https://langchain-ai.github.io/langgraph/)
 - [OpenAI API 文档](https://platform.openai.com/docs/)
+- [Langfuse 文档](https://langfuse.com/docs)
+- [Milvus 文档](https://milvus.io/docs)
 
 ### 实战项目灵感
 - 📝 AI 写作助手
