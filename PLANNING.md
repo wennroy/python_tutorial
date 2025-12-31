@@ -125,11 +125,36 @@
 *   类、继承、多态 vs 纯函数、高阶函数、Lambda。
 *   **AI 聚焦**: 代码范式重构 (OOP -> FP)。
 
-#### 模块 5: 包设计与生态
+#### 模块 5: AI 开发实战 (AI Development)
+*   **第一章: AI 开发全景图**
+    *   当前 AI 开发生态的核心组件
+    *   LLM 基本调用方式 (OpenAI, Anthropic, 本地模型)
+    *   环境搭建与 API Key 配置
+*   **第二章: LangChain 核心概念**
+    *   Prompt Templates (提示模板设计)
+    *   Output Parsers (结构化输出)
+    *   LCEL 表达式语言 (链式调用)
+*   **第三章: Memory 与 RAG**
+    *   对话记忆实现
+    *   向量嵌入与向量数据库 (Chroma)
+    *   检索增强生成 (RAG) 完整流程
+*   **第四章: Agent 与工具调用**
+    *   Agent 工作原理 (ReAct 模式)
+    *   自定义工具开发
+    *   LangGraph 状态图构建
+    *   Human-in-the-Loop 人机协作
+*   **第五章: AI 应用实战**
+    *   生产级项目架构设计
+    *   安全防护 (Prompt 注入防护)
+    *   性能优化与成本控制
+    *   部署与监控
+*   **AI 聚焦**: 构建完整的 AI 应用，从 Demo 到生产
+
+#### 模块 6: 包设计与生态 (待开发)
 *   `__init__.py`, 模块导入机制, Package 结构设计。
 *   常用库: `requests`, `pandas` 基础。
 
-#### 模块 6: RESTful API 设计与网络基础 (RESTful API Foundations)
+#### 模块 7: RESTful API 设计与网络基础 (RESTful API Foundations) (待开发)
 *   **HTTP 协议核心**: 请求方法 (GET, POST, PUT, DELETE), 状态码 (2xx, 4xx, 5xx), Header 与 Body。
 *   **REST 架构风格**: 资源 (Resources), 表现层 (Representation), 状态转移 (State Transfer)。
 *   **API 设计规范**: URL 命名规则, JSON 数据格式, 幂等性 (Idempotency)。
@@ -158,40 +183,79 @@
 3.  **前端交互 (Frontend Integration)**:
     *   构建简单的 HTML/JS 界面。
     *   使用 `fetch` 对接后端 API。
+
+### 当前实际项目结构 (Current Project Structure)
+
+```
+python_tutorial/
+├── docker-compose.dev.yml
+├── docker-compose.yml
+├── PLANNING.md
+├── README.md
 ├── curriculum_content/         # [教案] 实际的教程文件
-│   ├── 01_foundations/
-│   │   ├── 01_core.ipynb
-│   │   ├── 02_debugging.md     # 调试艺术
-│   │   ├── 03_data.ipynb       # 数据处理
-│   │   ├── 04_paradigms.ipynb  # 编程范式
-│   │   ├── 05_packages.md      # 包设计
-│   │   └── 06_rest_api.md      # RESTful API 基础
-│   ├── 02_advanced/
-│   │   └── ...
-│   └── 03_capstone_project/    # 智能心情日记教程
-python_tutorial_platform/
+│   ├── 00_setup/               # 模块 0: 现代化环境搭建
+│   │   ├── 01_python_installation.md
+│   │   ├── 02_virtual_environments.md
+│   │   ├── 03_ide_setup.md
+│   │   ├── 04_first_steps.md
+│   │   ├── 05_proxy_configuration.md
+│   │   └── solutions/
+│   ├── 01_core/                # 模块 1: Python 核心强化
+│   │   ├── 01_list_deep_dive.md
+│   │   ├── 02_dict_set_under_the_hood.md
+│   │   ├── 03_memory_management.md
+│   │   ├── 04_string_text_processing.md
+│   │   ├── 05_file_io_context_managers.md
+│   │   ├── 06_datetime_handling.md
+│   │   └── solutions/
+│   ├── 02_debugging/           # 模块 2: 调试艺术与工具使用
+│   │   ├── 01_vscode_debugger.md
+│   │   ├── 02_advanced_techniques.md
+│   │   ├── 03_ai_assisted_debugging.md
+│   │   ├── 04_pycharm_debugger.md
+│   │   ├── 05_ide_productivity_hacks.md
+│   │   └── solutions/
+│   ├── 03_data_processing/     # 模块 3: 数据处理与类型系统
+│   │   ├── 01_pandas_basics.md
+│   │   ├── 02_type_system_fundamentals.md
+│   │   ├── 03_advanced_typing.md
+│   │   ├── 04_office_automation.md
+│   │   ├── 05_file_encoding.md
+│   │   └── solutions/
+│   ├── 04_paradigms/           # 模块 4: 编程范式对比
+│   │   ├── 01_oop_concepts.md
+│   │   ├── 02_advanced_oop.md
+│   │   ├── 03_functional_concepts.md
+│   │   ├── 04_oop_vs_fp_refactoring.md
+│   │   ├── 05_design_patterns_practice.md
+│   │   └── solutions/
+│   ├── 05_ai_development/       # 模块 5: AI 开发实战 (新增)
+│   │   ├── 01_ai_landscape.md           # AI 开发全景图
+│   │   ├── 02_langchain_core.md         # LangChain 核心概念
+│   │   ├── 03_memory_and_rag.md         # Memory 与 RAG
+│   │   ├── 04_agents_and_tools.md       # Agent 与工具调用
+│   │   ├── 05_production_project.md     # AI 应用实战
+│   │   └── solutions/
+│   └── 99_extra/               # 模块 Extra: 常用模块拓展
+│       ├── 01_visualization_basics.md
+│       ├── 02_streamlit_dashboard.md
+│       ├── 03_logging_mastery.md
+│       ├── 04_docker_installation.md
+│       ├── 05_git_version_control.md
+│       └── solutions/
 ├── platform_backend/           # [平台] 后端代码 (FastAPI)
-├── curriculum_content/         # [教案] 实际的教程文件
-│   ├── 01_foundations/
-│   │   ├── 01_core.ipynb
-│   │   ├── 01_5_data.ipynb
-│   │   ├── 02_paradigms.ipynb
-│   │   ├── 03_packages.md
-│   │   └── 04_rest_api.md      # RESTful API 基础
-│   ├── 02_advanced/
-│   │   └── ...
-│   └── 03_capstone_project/    # 智能心情日记教程
-├── curriculum_content/         # [教案] 实际的教程文件
-│   ├── 01_foundations/
-│   │   ├── 01_core.ipynb
-│   │   └── 02_data.ipynb
-│   ├── 02_advanced/
-│   │   └── ...
-│   └── 03_capstone_project/    # 智能心情日记教程
-│       ├── step1_backend.md
-│       ├── step2_database.md
-│       └── ...
-└── README.md
+│   ├── Dockerfile
+│   ├── main.py
+│   └── requirements.txt
+├── platform_frontend/          # [平台] 前端代码
+│   ├── app.js
+│   ├── Dockerfile
+│   ├── index.html
+│   ├── nginx.conf
+│   └── style.css
+└── workspace/                  # 用户练习工作区
+    ├── exercise_00_01.py
+    └── exercise_01_01.py
 ```
 
 ## 7. 下一步计划
@@ -199,37 +263,3 @@ python_tutorial_platform/
 2.  初始化 `platform_backend` 和 `curriculum_content` 目录。
 3.  编写第一个教案文件作为测试。
 4.  实现后端的内容解析引擎。
-│   ├── 04_backend_basics.ipynb         # 后端基础
-│   ├── 05_database_integration.ipynb   # 数据库集成
-│   ├── 06_frontend_connection.md       # 前端连接
-│   ├── 07_adding_intelligence.ipynb    # 智能功能
-│   ├── 08_testing_refactoring.md       # 测试与重构
-│   ├── special_leetcode.ipynb          # 算法实战
-│   └── extra_common_modules.md         # 常用模块拓展 (可选)
-└── README.mdodels.py
-│   │   ├── database.py
-│   │   └── utils.py
-│   ├── tests/
-│   └── requirements.txt
-├── frontend/               # Web 界面
-│   ├── index.html
-│   ├── style.css
-│   └── app.js
-├── tutorial/               # 教学内容
-│   ├── 00_setup_and_ai.md              # 环境搭建
-│   ├── 01_python_core_refresher.ipynb  # 核心概念强化
-│   ├── 02_paradigms.ipynb              # 编程范式 (OOP vs FP)
-│   ├── 03_package_design.md            # 包设计
-│   ├── 04_backend_basics.ipynb         # 后端基础
-│   ├── 05_database_integration.ipynb   # 数据库集成
-│   ├── 06_frontend_connection.md       # 前端连接
-│   ├── 07_adding_intelligence.ipynb    # 智能功能
-│   ├── 08_testing_refactoring.md       # 测试与重构
-│   └── special_leetcode.ipynb          # 算法实战
-└── README.md
-```
-
-## 5. 下一步计划
-1.  审查此计划。
-2.  初始化项目文件夹结构。
-3.  开始创建模块 0 和模块 1 的内容。
