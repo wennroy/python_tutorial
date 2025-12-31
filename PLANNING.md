@@ -150,9 +150,12 @@
     *   部署与监控
 *   **AI 聚焦**: 构建完整的 AI 应用，从 Demo 到生产
 
-#### 模块 6: 包设计与生态 (待开发)
-*   `__init__.py`, 模块导入机制, Package 结构设计。
-*   常用库: `requests`, `pandas` 基础。
+#### 模块 6: 包设计与生态
+*   **第一章: 模块导入机制** - `__init__.py`, 相对导入 vs 绝对导入, sys.path
+*   **第二章: Package 结构设计** - src layout, pyproject.toml, 发布到 PyPI
+*   **第三章: requests 与 HTTP** - HTTP 基础, requests 库, Session 管理
+*   **第四章: 依赖管理** - venv, pip, uv, poetry, 版本冲突解决
+*   **AI 聚焦**: 让 Copilot 生成项目结构和配置文件
 
 #### 模块 7: RESTful API 设计与网络基础 (RESTful API Foundations) (待开发)
 *   **HTTP 协议核心**: 请求方法 (GET, POST, PUT, DELETE), 状态码 (2xx, 4xx, 5xx), Header 与 Body。
@@ -235,6 +238,12 @@ python_tutorial/
 │   │   ├── 03_memory_and_rag.md         # Memory 与 RAG
 │   │   ├── 04_agents_and_tools.md       # Agent 与工具调用
 │   │   ├── 05_production_project.md     # AI 应用实战
+│   │   └── solutions/
+│   ├── 06_package_design/       # 模块 6: 包设计与生态 (新增)
+│   │   ├── 01_module_import.md          # 模块导入机制
+│   │   ├── 02_package_structure.md      # Package 结构设计
+│   │   ├── 03_requests_http.md          # requests 与 HTTP
+│   │   ├── 04_dependency_management.md  # 依赖管理
 │   │   └── solutions/
 │   └── 99_extra/               # 模块 Extra: 常用模块拓展
 │       ├── 01_visualization_basics.md
